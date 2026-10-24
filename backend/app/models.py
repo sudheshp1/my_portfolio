@@ -51,6 +51,7 @@ class Transaction(Base):
     quantity: Mapped[float] = mapped_column(Float)
     price: Mapped[float] = mapped_column(Float)
     amount: Mapped[float] = mapped_column(Float)
+    external_id: Mapped[str | None] = mapped_column(String(64), unique=True)  # e.g. Zerodha trade_id, for dedupe
 
 
 class DailySnapshot(Base):

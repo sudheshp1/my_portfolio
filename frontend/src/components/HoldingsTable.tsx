@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import {
@@ -106,11 +107,19 @@ export default function HoldingsTable({ holdings }: { holdings: Holding[] }) {
           </thead>
           <tbody className="divide-y divide-zinc-100 tabular-nums dark:divide-zinc-800">
             {rows.map((h) => (
-              <tr key={`${h.account}-${h.isin ?? h.symbol}`} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+              <tr key={`${h.account}-${h.instrument_id}`} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
                 <td className="px-4 py-3">
-                  <p className="max-w-xs truncate font-medium" title={h.name}>
-                    {displayName(h)}
-                  </p>
+                  {h.asset_class === "cash" ? (
+                    <p className="max-w-xs truncate font-medium">{displayName(h)}</p>
+                  ) : (
+                    <Link
+                      href={`/holdings/${h.instrument_id}`}
+                      className="block max-w-xs truncate font-medium hover:underline"
+                      title={h.name}
+                    >
+                      {displayName(h)}
+                    </Link>
+                  )}
                   <p className="text-xs text-zinc-500">
                     {ASSET_LABELS[h.asset_class] ?? h.asset_class} · {h.account}
                   </p>

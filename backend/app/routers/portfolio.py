@@ -1,13 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException
+from datetime import datetime
+
+import pyxirr
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from kiteconnect.exceptions import KiteException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import Account, DailySnapshot, Holding, Instrument
-from ..services import kite_auth, kite_sync, reference
+from ..models import Account, DailySnapshot, Holding, Instrument, Transaction
+from ..services import kite_auth, kite_sync, reference, tradebook
 
 router = APIRouter(tags=["portfolio"])
+
+MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 
 
 def _require_kite(db: Session):
@@ -39,6 +44,7 @@ def holdings(db: Session = Depends(get_db)):
         prev_price = h.last_price - h.day_change
         result.append(
             {
+                "instrument_id": inst.id,
                 "account": acc.name,
                 "isin": inst.isin,
                 "symbol": inst.symbol,
@@ -57,6 +63,70 @@ def holdings(db: Session = Depends(get_db)):
             }
         )
     return sorted(result, key=lambda r: r["current_value"], reverse=True)
+
+
+@router.get("/holdings/{instrument_id}")
+def holding_detail(instrument_id: int, db: Session = Depends(get_db)):
+    """One instrument: current holding (if still held), its transactions and XIRR."""
+    inst = db.get(Instrument, instrument_id)
+    if inst is None:
+        raise HTTPException(404, "Instrument not found")
+
+    current = next((h for h in holdings(db) if h["instrument_id"] == instrument_id), None)
+    txns = db.query(Transaction).filter_by(instrument_id=instrument_id).order_by(Transaction.date).all()
+
+    net_qty = sum(t.quantity if t.type == "buy" else -t.quantity for t in txns)
+    held_qty = current["quantity"] if current else 0.0
+
+    # Cash flows from the investor's view: buys out (negative), sells in (positive), today's value in.
+    # Today's value only counts the units the trades account for, so a partial tradebook doesn't
+    # credit returns on shares whose cost we never saw.
+    flows = [(t.date, -t.amount if t.type == "buy" else t.amount) for t in txns]
+    xirr_quantity = min(net_qty, held_qty)
+    if current and xirr_quantity > 0:
+        flows.append((datetime.now(kite_auth.IST).date(), xirr_quantity * current["last_price"]))
+    xirr = None
+    if txns and len(flows) >= 2:
+        try:
+            rate = pyxirr.xirr([d for d, _ in flows], [a for _, a in flows])
+            xirr = rate * 100 if rate is not None else None
+        except (pyxirr.InvalidPaymentsError, ValueError):
+            xirr = None
+
+    return {
+        "instrument": {
+            "id": inst.id,
+            "isin": inst.isin,
+            "symbol": inst.symbol,
+            "name": inst.name,
+            "asset_class": inst.asset_class,
+            "sector": inst.sector,
+            "market_cap": inst.market_cap,
+        },
+        "holding": current,
+        "transactions": [
+            {"date": t.date, "type": t.type, "quantity": t.quantity, "price": t.price, "amount": t.amount}
+            for t in reversed(txns)
+        ],
+        "xirr": xirr,
+        "first_buy": next((t.date for t in txns if t.type == "buy"), None),
+        # Bonuses, splits, demat transfers and trades older than the imported file aren't in the tradebook
+        "quantity_mismatch": bool(txns) and abs(net_qty - held_qty) > 1e-6,
+        "transactions_quantity": net_qty,
+        "xirr_quantity": max(xirr_quantity, 0.0),
+    }
+
+
+@router.post("/import/tradebook")
+async def import_tradebook(file: UploadFile, db: Session = Depends(get_db)):
+    content = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(413, "File is larger than 20 MB")
+    try:
+        return tradebook.import_csv(db, content)
+    except (ValueError, UnicodeDecodeError) as e:
+        db.rollback()
+        raise HTTPException(400, str(e))
 
 
 @router.get("/summary")

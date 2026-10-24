@@ -8,6 +8,7 @@ import NetWorthChart from "@/components/NetWorthChart";
 import SectorBreakdown from "@/components/SectorBreakdown";
 import SummaryCards from "@/components/SummaryCards";
 import TopMovers from "@/components/TopMovers";
+import TradebookImport from "@/components/TradebookImport";
 import {
   API_URL,
   getBreakdown,
@@ -99,23 +100,26 @@ export default function Dashboard() {
               : "Not synced yet"}
           </p>
         </div>
-        {summary &&
-          (summary.kite_connected ? (
-            <button
-              onClick={sync}
-              disabled={syncing}
-              className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
-            >
-              {syncing ? "Syncing…" : "Sync now"}
-            </button>
-          ) : (
-            <a
-              href={`${API_URL}/kite/login`}
-              className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-orange-600"
-            >
-              Login with Kite
-            </a>
-          ))}
+        <div className="flex items-start gap-2">
+          <TradebookImport />
+          {summary &&
+            (summary.kite_connected ? (
+              <button
+                onClick={sync}
+                disabled={syncing}
+                className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+              >
+                {syncing ? "Syncing…" : "Sync now"}
+              </button>
+            ) : (
+              <a
+                href={`${API_URL}/kite/login`}
+                className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-orange-600"
+              >
+                Login with Kite
+              </a>
+            ))}
+        </div>
       </header>
 
       {error && (

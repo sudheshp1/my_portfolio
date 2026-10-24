@@ -3,6 +3,7 @@ export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000
 export type AssetClass = "equity" | "mf" | "debt" | "gold" | "cash" | "other";
 
 export interface Holding {
+  instrument_id: number;
   account: string;
   isin: string | null;
   symbol: string | null;
@@ -56,6 +57,40 @@ export interface Breakdown {
   error: string | null;
 }
 
+export interface Transaction {
+  date: string;
+  type: "buy" | "sell";
+  quantity: number;
+  price: number;
+  amount: number;
+}
+
+export interface HoldingDetail {
+  instrument: {
+    id: number;
+    isin: string | null;
+    symbol: string | null;
+    name: string;
+    asset_class: AssetClass;
+    sector: string | null;
+    market_cap: string | null;
+  };
+  holding: Holding | null;
+  transactions: Transaction[];
+  xirr: number | null;
+  first_buy: string | null;
+  quantity_mismatch: boolean;
+  transactions_quantity: number;
+  xirr_quantity: number;
+}
+
+export interface ImportResult {
+  imported: number;
+  duplicates: number;
+  skipped_segments: number;
+  errors: string[];
+}
+
 export interface SyncResult {
   synced_at: string;
   counts: Record<string, number>;
@@ -75,7 +110,14 @@ export const getSummary = () => request<Summary>("/summary");
 export const getHoldings = () => request<Holding[]>("/holdings");
 export const getHistory = () => request<HistoryPoint[]>("/history");
 export const getBreakdown = () => request<Breakdown>("/breakdown");
+export const getHoldingDetail = (id: string) => request<HoldingDetail>(`/holdings/${encodeURIComponent(id)}`);
 export const runSync = () => request<SyncResult>("/sync", { method: "POST" });
+
+export function importTradebook(file: File) {
+  const body = new FormData();
+  body.append("file", file);
+  return request<ImportResult>("/import/tradebook", { method: "POST", body });
+}
 
 /** Fixed color per asset class — color follows the class, never its rank. */
 export const assetColor = (cls: string) =>
@@ -99,6 +141,8 @@ export const formatPrice = (n: number) => inrPrecise.format(n);
 export const formatQty = (n: number) => qty.format(n);
 export const formatPct = (n: number) => `${n >= 0 ? "+" : ""}${n.toFixed(2)}%`;
 export const formatSigned = (n: number) => `${n >= 0 ? "+" : "−"}${inr.format(Math.abs(n))}`;
+
+export const formatDate = (d: string) => new Date(d).toLocaleDateString("en-IN", { dateStyle: "medium" });
 
 /** Short Indian-style amounts for axes: ₹5.84L, ₹1.2Cr. */
 export function formatCompactINR(n: number) {

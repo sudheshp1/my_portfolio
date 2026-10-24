@@ -12,7 +12,7 @@ ACCOUNT_NAME = "Zerodha"
 CASH_SYMBOL = "ZERODHA_CASH"
 
 
-def _get_or_create_account(db: Session) -> Account:
+def get_or_create_account(db: Session) -> Account:
     account = db.query(Account).filter_by(name=ACCOUNT_NAME).first()
     if account is None:
         account = Account(name=ACCOUNT_NAME, type="broker")
@@ -50,7 +50,7 @@ def _add_holding(db, account, inst, *, quantity, avg_cost, last_price, day_chang
 
 def sync(db: Session, kite: KiteConnect) -> dict:
     now = datetime.now(IST).replace(tzinfo=None)
-    account = _get_or_create_account(db)
+    account = get_or_create_account(db)
     counts = {"equity": 0, "mf": 0, "cash": 0}
     errors = {}
 
