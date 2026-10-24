@@ -11,6 +11,11 @@
   --series-gold: #eda100;
   --series-debt: #e87ba4;
   --series-other: #008300;
+  /* Market-cap tiers: one blue ramp, larger = more prominent (validated as ordinal) */
+  --cap-large: #184f95;
+  --cap-mid: #2a78d6;
+  --cap-small: #5598e7;
+  --cap-micro: #86b6ef;
   --chart-context: #a1a09a;
   --chart-grid: #e1e0d9;
   --chart-axis: #c3c2b7;
@@ -35,6 +40,10 @@
     --series-gold: #c98500;
     --series-debt: #d55181;
     --series-other: #008300;
+    --cap-large: #9ec5f4;
+    --cap-mid: #5598e7;
+    --cap-small: #2a78d6;
+    --cap-micro: #184f95;
     --chart-context: #6b6a65;
     --chart-grid: #2c2c2a;
     --chart-axis: #383835;

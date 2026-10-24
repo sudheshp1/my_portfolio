@@ -105,7 +105,7 @@ my_portfolio/
 | 2.2 | Asset-allocation chart | 🟨 | Kept as a stacked bar instead of a donut (easier to compare parts). Fixed, colorblind-validated color per asset class in `globals.css` (light + dark). Needs real-data check |
 | 2.3 | Net-worth-over-time chart (from snapshots) | 🟨 | `GET /history` + Recharts area chart (value) with dashed invested line, hover tooltip, 1M/3M/1Y/All. History only exists from the first sync onward. Needs real-data check |
 | 2.4 | Top gainers / losers | 🟨 | Today's movers (stocks by day %) and overall return (highest/lowest by P&L %). `day_change_pct` added to `/holdings`. Needs real-data check |
-| 2.5 | Sector and market-cap breakdown | ⬜ | Needs sector mapping for instruments |
+| 2.5 | Sector and market-cap breakdown | 🟨 | Source: NSE index constituent CSVs from `archives.nseindia.com` (Total Market list for industry; Nifty 100 / Midcap 150 / Smallcap 250 / Microcap 250 for cap tier), matched by ISIN. Cached in `data/reference/`, refreshed monthly or via `POST /reference/refresh`. `GET /breakdown` covers stocks & ETFs only (MFs excluded); ETFs show as Unclassified. Needs real-data check |
 | 2.6 | Holding detail page (transactions, avg cost, XIRR) | ⬜ | |
 
 ### Phase 3 — Other holdings
@@ -192,3 +192,4 @@ API docs: http://localhost:8000/docs
 | 2026-10-24 | Real Kite login verified (1.3). Sync service + portfolio endpoints built (1.4, 1.5) |
 | 2026-10-24 | Sync verified against real account (1.4, 1.5). Next.js dashboard built and verified (1.6) — **Phase 1 complete** |
 | 2026-10-24 | Phase 2 started on branch `phase-2-dashboard`: allocation polish, net-worth chart, top movers (2.1–2.4) |
+| 2026-10-24 | Merged into `main`. Sector & market-cap breakdown built on branch `phase-2-sectors` (2.5) |

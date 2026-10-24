@@ -5,14 +5,17 @@ import { useEffect, useState } from "react";
 import AllocationBar from "@/components/AllocationBar";
 import HoldingsTable from "@/components/HoldingsTable";
 import NetWorthChart from "@/components/NetWorthChart";
+import SectorBreakdown from "@/components/SectorBreakdown";
 import SummaryCards from "@/components/SummaryCards";
 import TopMovers from "@/components/TopMovers";
 import {
   API_URL,
+  getBreakdown,
   getHistory,
   getHoldings,
   getSummary,
   runSync,
+  type Breakdown,
   type HistoryPoint,
   type Holding,
   type Summary,
@@ -25,6 +28,8 @@ export default function Dashboard() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [holdings, setHoldings] = useState<Holding[]>([]);
   const [history, setHistory] = useState<HistoryPoint[]>([]);
+  // Loaded separately: the first call may download NSE sector lists and shouldn't delay the dashboard
+  const [breakdown, setBreakdown] = useState<Breakdown | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -39,6 +44,7 @@ export default function Dashboard() {
     } catch {
       setError(BACKEND_DOWN);
     }
+    getBreakdown().then(setBreakdown, () => {});
   };
 
   useEffect(() => {
@@ -56,6 +62,12 @@ export default function Dashboard() {
       .catch(() => {
         if (!cancelled) setError(BACKEND_DOWN);
       });
+    getBreakdown().then(
+      (b) => {
+        if (!cancelled) setBreakdown(b);
+      },
+      () => {},
+    );
     return () => {
       cancelled = true;
     };
@@ -130,6 +142,7 @@ export default function Dashboard() {
             <AllocationBar summary={summary} />
           </div>
           <TopMovers holdings={holdings} />
+          {breakdown && <SectorBreakdown breakdown={breakdown} />}
           <HoldingsTable holdings={holdings} />
         </>
       )}

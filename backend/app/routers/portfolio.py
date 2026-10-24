@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from ..db import get_db
 from ..models import Account, DailySnapshot, Holding, Instrument
-from ..services import kite_auth, kite_sync
+from ..services import kite_auth, kite_sync, reference
 
 router = APIRouter(tags=["portfolio"])
 
@@ -96,6 +96,56 @@ def history(db: Session = Depends(get_db)):
         .all()
     )
     return [{"date": d, "invested": inv, "current_value": cur} for d, inv, cur in rows]
+
+
+@router.get("/breakdown")
+def breakdown(db: Session = Depends(get_db)):
+    """Sector and market-cap split of directly held stocks/ETFs (mutual funds excluded)."""
+    error = None
+    try:
+        reference.classify(db)
+    except Exception as e:  # noqa: BLE001  (offline / NSE down: fall back to last known classification)
+        db.rollback()
+        error = f"Couldn't refresh NSE sector data: {e}"
+
+    rows = (
+        db.query(Holding, Instrument)
+        .join(Instrument, Holding.instrument_id == Instrument.id)
+        .filter(Instrument.asset_class == "equity")
+        .all()
+    )
+    sectors: dict[str, dict] = {}
+    caps: dict[str, dict] = {}
+    unclassified = []
+    total = 0.0
+    for h, inst in rows:
+        value = h.quantity * h.last_price
+        total += value
+        for bucket, key in ((sectors, inst.sector or "Unclassified"), (caps, inst.market_cap or "unclassified")):
+            b = bucket.setdefault(key, {"name": key, "value": 0.0, "count": 0})
+            b["value"] += value
+            b["count"] += 1
+        if inst.sector is None:
+            unclassified.append(inst.symbol)
+
+    return {
+        "total": total,
+        "sectors": sorted(sectors.values(), key=lambda b: -b["value"]),
+        "market_caps": sorted(caps.values(), key=lambda b: -b["value"]),
+        "unclassified": sorted(unclassified),
+        "reference_updated": reference.reference_date(),
+        "error": error,
+    }
+
+
+@router.post("/reference/refresh")
+def refresh_reference(db: Session = Depends(get_db)):
+    """Re-downloads NSE index lists now instead of waiting for the monthly refresh."""
+    try:
+        matched = reference.classify(db, force=True)
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(502, f"Couldn't download NSE sector data: {e}")
+    return {"matched": matched}
 
 
 @router.get("/positions")

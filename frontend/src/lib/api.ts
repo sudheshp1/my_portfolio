@@ -41,6 +41,21 @@ export interface Summary extends Totals {
   kite_connected: boolean;
 }
 
+export interface BreakdownBucket {
+  name: string;
+  value: number;
+  count: number;
+}
+
+export interface Breakdown {
+  total: number;
+  sectors: BreakdownBucket[];
+  market_caps: BreakdownBucket[];
+  unclassified: string[];
+  reference_updated: number | null;
+  error: string | null;
+}
+
 export interface SyncResult {
   synced_at: string;
   counts: Record<string, number>;
@@ -59,6 +74,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const getSummary = () => request<Summary>("/summary");
 export const getHoldings = () => request<Holding[]>("/holdings");
 export const getHistory = () => request<HistoryPoint[]>("/history");
+export const getBreakdown = () => request<Breakdown>("/breakdown");
 export const runSync = () => request<SyncResult>("/sync", { method: "POST" });
 
 /** Fixed color per asset class — color follows the class, never its rank. */
