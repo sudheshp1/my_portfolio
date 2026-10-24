@@ -5,7 +5,13 @@ import { useRef, useState } from "react";
 import { importTradebook } from "@/lib/api";
 
 /** Upload button for a Zerodha Console tradebook CSV. Reports the outcome inline. */
-export default function TradebookImport({ onImported }: { onImported?: () => void }) {
+export default function TradebookImport({
+  onImported,
+  align = "end",
+}: {
+  onImported?: () => void;
+  align?: "start" | "end";
+}) {
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
@@ -30,7 +36,7 @@ export default function TradebookImport({ onImported }: { onImported?: () => voi
   };
 
   return (
-    <div className="flex flex-col items-end gap-1">
+    <div className={`flex flex-col gap-1 ${align === "end" ? "items-end" : "items-start"}`}>
       <input
         ref={input}
         type="file"
@@ -46,7 +52,7 @@ export default function TradebookImport({ onImported }: { onImported?: () => voi
         {busy ? "Importing…" : "Import tradebook"}
       </button>
       {message && (
-        <p className={`max-w-sm text-right text-xs ${message.ok ? "text-zinc-500" : "text-amber-700 dark:text-amber-400"}`}>
+        <p className={`max-w-sm text-xs ${align === "end" ? "text-right" : ""} ${message.ok ? "text-zinc-500" : "text-amber-700 dark:text-amber-400"}`}>
           {message.text}
         </p>
       )}

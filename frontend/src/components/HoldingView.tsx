@@ -17,6 +17,8 @@ import {
 } from "@/lib/api";
 
 const CAP_LABELS: Record<string, string> = { large: "Large cap", mid: "Mid cap", small: "Small cap", micro: "Micro cap" };
+const TXN_LABELS = { buy: "Buy", sell: "Sell", dividend: "Dividend", charge: "Tax/charge" };
+const CAS_ACCOUNT = "CAMS / KFintech"; // backend/app/services/cas_import.py ACCOUNT_NAME
 
 function tone(n: number) {
   return n >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400";
@@ -55,6 +57,7 @@ export default function HoldingView({ params }: { params: Promise<{ id: string }
 
   const inst = detail?.instrument;
   const h = detail?.holding;
+  const fromCas = h?.account === CAS_ACCOUNT;
   const title = inst ? (inst.asset_class === "equity" ? inst.symbol ?? inst.name : inst.name) : "";
   const tags = inst
     ? [
@@ -148,14 +151,22 @@ export default function HoldingView({ params }: { params: Promise<{ id: string }
               <div>
                 <h2 className="font-medium">Transactions</h2>
                 <p className="text-xs text-zinc-500">
-                  From Zerodha Console tradebook imports
+                  {fromCas ? "From your CAS statement" : "From Zerodha Console tradebook imports"}
                   {detail.first_buy && ` · first buy ${formatDate(detail.first_buy)}`}
                 </p>
               </div>
-              <TradebookImport onImported={() => setVersion((v) => v + 1)} />
+              {!fromCas && <TradebookImport onImported={() => setVersion((v) => v + 1)} />}
             </div>
 
-            {detail.transactions.length === 0 ? (
+            {detail.transactions.length === 0 && fromCas ? (
+              <p className="p-6 text-sm text-zinc-500">
+                No transactions in the imported CAS. Import a <strong>detailed</strong> CAS on the{" "}
+                <Link href="/import" className="underline">
+                  Import page
+                </Link>{" "}
+                to see them and calculate XIRR.
+              </p>
+            ) : detail.transactions.length === 0 ? (
               <div className="space-y-2 p-6 text-sm text-zinc-500">
                 <p>No transactions yet. Kite&apos;s API only shares today&apos;s trades, so history comes from Console:</p>
                 <ol className="list-decimal space-y-1 pl-5">
@@ -188,12 +199,14 @@ export default function HoldingView({ params }: { params: Promise<{ id: string }
                                 : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
                             }`}
                           >
-                            {t.type === "buy" ? "Buy" : "Sell"}
+                            {TXN_LABELS[t.type]}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-right">{formatQty(t.quantity)}</td>
-                        <td className="px-4 py-3 text-right">{formatPrice(t.price)}</td>
-                        <td className="px-4 py-3 text-right">{formatINR(t.amount)}</td>
+                        <td className="px-4 py-3 text-right">{t.quantity ? formatQty(t.quantity) : "—"}</td>
+                        <td className="px-4 py-3 text-right">{t.price ? formatPrice(t.price) : "—"}</td>
+                        <td className="px-4 py-3 text-right">
+                          {t.type === "charge" ? formatPrice(t.amount) : formatINR(t.amount)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

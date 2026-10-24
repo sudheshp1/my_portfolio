@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import AllocationBar from "@/components/AllocationBar";
@@ -8,13 +9,13 @@ import NetWorthChart from "@/components/NetWorthChart";
 import SectorBreakdown from "@/components/SectorBreakdown";
 import SummaryCards from "@/components/SummaryCards";
 import TopMovers from "@/components/TopMovers";
-import TradebookImport from "@/components/TradebookImport";
 import {
   API_URL,
   getBreakdown,
   getHistory,
   getHoldings,
   getSummary,
+  refreshNavs,
   runSync,
   type Breakdown,
   type HistoryPoint,
@@ -69,6 +70,17 @@ export default function Dashboard() {
       },
       () => {},
     );
+    // Revalue non-Zerodha funds with AMFI's latest NAVs; reload only if something changed
+    refreshNavs()
+      .then((r) => (r.updated > 0 && !cancelled ? fetchDashboard() : null))
+      .then((data) => {
+        if (!data || cancelled) return;
+        const [s, h, hist] = data;
+        setSummary(s);
+        setHoldings(h);
+        setHistory(hist);
+      })
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -101,7 +113,12 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="flex items-start gap-2">
-          <TradebookImport />
+          <Link
+            href="/import"
+            className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium transition hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+          >
+            Import
+          </Link>
           {summary &&
             (summary.kite_connected ? (
               <button

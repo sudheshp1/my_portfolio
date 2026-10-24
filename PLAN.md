@@ -112,10 +112,11 @@ my_portfolio/
 
 | # | Step | Status | Notes |
 |---|---|---|---|
-| 3.1 | CAS PDF upload + parse with `casparser`; merge by ISIN | ⬜ | PDF password = PAN (typically) |
-| 3.2 | Daily AMFI NAV fetch to revalue MFs | ⬜ | |
+| 3.1 | CAS PDF upload + parse with `casparser`; merge by ISIN | 🟨 | CAMS/KFintech CAS only, on the new `/import` page (`POST /import/cas`). Account "CAMS / KFintech"; holdings replaced per import (summed across folios by ISIN), transactions deduped. Unit-bearing rows typed by sign (handles reversals); dividends and stamp duty/STT/TDS kept for XIRR. Password is used once and never stored. Warns if a fund is also held via Zerodha Coin. NSDL/CDSL (demat) CAS rejected for now — it would double count Zerodha. Tested with constructed statements; needs a real CAS |
+| 3.2 | Daily AMFI NAV fetch to revalue MFs | 🟨 | `portal.amfiindia.com/spages/NAVAll.txt`, cached 6h in `data/reference/`. Runs after each CAS import and when the dashboard loads (`POST /nav/refresh`); only non-Zerodha funds (Kite already prices Coin funds) |
 | 3.3 | Manual asset forms (FD, PPF/EPF, gold, US stocks, crypto) | ⬜ | |
 | 3.4 | CSV import for manual assets | ⬜ | |
+| 3.5 | Depository CAS (NSDL/CDSL) for stocks at other brokers | ⬜ | Must skip Zerodha's demat account to avoid double counting |
 
 ### Phase 4 — Insights
 
@@ -194,3 +195,5 @@ API docs: http://localhost:8000/docs
 | 2026-10-24 | Phase 2 started on branch `phase-2-dashboard`: allocation polish, net-worth chart, top movers (2.1–2.4) |
 | 2026-10-24 | Merged into `main`. Sector & market-cap breakdown built on branch `phase-2-sectors` (2.5) |
 | 2026-10-24 | 2.5 merged into `main`. Holding detail page + tradebook import + XIRR built on branch `phase-2-holding-detail` (2.6), verified with a real tradebook — **Phase 2 complete** |
+| 2026-10-24 | Phase 3 started on branch `phase-3-other-holdings`: CAS import (3.1) and AMFI NAV refresh (3.2); dashboard header now links to an Import page |
+| 2026-10-24 | Paused. Everything merged into `main`. **Next time:** import a real CAS to verify 3.1/3.2, then build 3.3 (manual assets: FD, PPF/EPF, gold, US stocks, crypto) |

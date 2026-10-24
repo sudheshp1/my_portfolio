@@ -1,18 +1,19 @@
 from datetime import datetime
 
 import pyxirr
-from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile
 from kiteconnect.exceptions import KiteException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..db import get_db
 from ..models import Account, DailySnapshot, Holding, Instrument, Transaction
-from ..services import kite_auth, kite_sync, reference, tradebook
+from ..services import cas_import, kite_auth, kite_sync, nav, reference, tradebook
 
 router = APIRouter(tags=["portfolio"])
 
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
+OUTFLOW_TYPES = {"buy", "charge"}  # money paid in; sells and dividends are money received
 
 
 def _require_kite(db: Session):
@@ -75,13 +76,13 @@ def holding_detail(instrument_id: int, db: Session = Depends(get_db)):
     current = next((h for h in holdings(db) if h["instrument_id"] == instrument_id), None)
     txns = db.query(Transaction).filter_by(instrument_id=instrument_id).order_by(Transaction.date).all()
 
-    net_qty = sum(t.quantity if t.type == "buy" else -t.quantity for t in txns)
+    net_qty = sum(t.quantity if t.type == "buy" else -t.quantity if t.type == "sell" else 0.0 for t in txns)
     held_qty = current["quantity"] if current else 0.0
 
     # Cash flows from the investor's view: buys out (negative), sells in (positive), today's value in.
     # Today's value only counts the units the trades account for, so a partial tradebook doesn't
     # credit returns on shares whose cost we never saw.
-    flows = [(t.date, -t.amount if t.type == "buy" else t.amount) for t in txns]
+    flows = [(t.date, -t.amount if t.type in OUTFLOW_TYPES else t.amount) for t in txns]
     xirr_quantity = min(net_qty, held_qty)
     if current and xirr_quantity > 0:
         flows.append((datetime.now(kite_auth.IST).date(), xirr_quantity * current["last_price"]))
@@ -117,16 +118,49 @@ def holding_detail(instrument_id: int, db: Session = Depends(get_db)):
     }
 
 
-@router.post("/import/tradebook")
-async def import_tradebook(file: UploadFile, db: Session = Depends(get_db)):
+async def _read_upload(file: UploadFile) -> bytes:
     content = await file.read(MAX_UPLOAD_BYTES + 1)
     if len(content) > MAX_UPLOAD_BYTES:
         raise HTTPException(413, "File is larger than 20 MB")
+    return content
+
+
+@router.post("/import/tradebook")
+async def import_tradebook(file: UploadFile, db: Session = Depends(get_db)):
+    content = await _read_upload(file)
     try:
         return tradebook.import_csv(db, content)
     except (ValueError, UnicodeDecodeError) as e:
         db.rollback()
         raise HTTPException(400, str(e))
+
+
+@router.post("/import/cas")
+async def import_cas(file: UploadFile, password: str = Form(""), db: Session = Depends(get_db)):
+    """CAMS/KFintech CAS PDF. The password is used only to open the PDF and is never stored."""
+    content = await _read_upload(file)
+    try:
+        data = cas_import.parse(content, password)
+        result = cas_import.import_data(db, data)
+    except ValueError as e:
+        db.rollback()
+        raise HTTPException(400, str(e))
+    try:
+        result["nav"] = nav.refresh(db)  # CAS NAVs can be weeks old; bring them up to date
+    except Exception as e:  # noqa: BLE001
+        db.rollback()
+        result["warnings"].append(f"Couldn't fetch latest NAVs from AMFI: {e}")
+    return result
+
+
+@router.post("/nav/refresh")
+def refresh_navs(force: bool = False, db: Session = Depends(get_db)):
+    """Revalues non-Zerodha mutual funds with AMFI's latest NAVs (file cached for 6 hours)."""
+    try:
+        return nav.refresh(db, force=force)
+    except Exception as e:  # noqa: BLE001
+        db.rollback()
+        raise HTTPException(502, f"Couldn't fetch NAVs from AMFI: {e}")
 
 
 @router.get("/summary")

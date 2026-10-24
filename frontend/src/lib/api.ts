@@ -59,7 +59,7 @@ export interface Breakdown {
 
 export interface Transaction {
   date: string;
-  type: "buy" | "sell";
+  type: "buy" | "sell" | "dividend" | "charge";
   quantity: number;
   price: number;
   amount: number;
@@ -91,6 +91,22 @@ export interface ImportResult {
   errors: string[];
 }
 
+export interface NavRefreshResult {
+  updated: number;
+  checked: number;
+  nav_date: string | null;
+}
+
+export interface CasImportResult {
+  statement_period: string;
+  cas_type: string;
+  schemes: number;
+  transactions: number;
+  duplicates: number;
+  warnings: string[];
+  nav?: NavRefreshResult;
+}
+
 export interface SyncResult {
   synced_at: string;
   counts: Record<string, number>;
@@ -118,6 +134,15 @@ export function importTradebook(file: File) {
   body.append("file", file);
   return request<ImportResult>("/import/tradebook", { method: "POST", body });
 }
+
+export function importCas(file: File, password: string) {
+  const body = new FormData();
+  body.append("file", file);
+  body.append("password", password);
+  return request<CasImportResult>("/import/cas", { method: "POST", body });
+}
+
+export const refreshNavs = () => request<NavRefreshResult>("/nav/refresh", { method: "POST" });
 
 /** Fixed color per asset class — color follows the class, never its rank. */
 export const assetColor = (cls: string) =>

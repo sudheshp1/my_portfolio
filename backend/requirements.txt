@@ -7,3 +7,4 @@ cryptography==44.0.0
 requests==2.34.2
 pyxirr==0.10.8
 python-multipart==0.0.32
+casparser==1.4.1
