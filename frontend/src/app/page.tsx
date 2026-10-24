@@ -4,24 +4,37 @@ import { useEffect, useState } from "react";
 
 import AllocationBar from "@/components/AllocationBar";
 import HoldingsTable from "@/components/HoldingsTable";
+import NetWorthChart from "@/components/NetWorthChart";
 import SummaryCards from "@/components/SummaryCards";
-import { API_URL, getHoldings, getSummary, runSync, type Holding, type Summary } from "@/lib/api";
+import TopMovers from "@/components/TopMovers";
+import {
+  API_URL,
+  getHistory,
+  getHoldings,
+  getSummary,
+  runSync,
+  type HistoryPoint,
+  type Holding,
+  type Summary,
+} from "@/lib/api";
 
-const fetchDashboard = () => Promise.all([getSummary(), getHoldings()]);
+const fetchDashboard = () => Promise.all([getSummary(), getHoldings(), getHistory()]);
 const BACKEND_DOWN = `Can't reach the backend at ${API_URL}. Is it running?`;
 
 export default function Dashboard() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [holdings, setHoldings] = useState<Holding[]>([]);
+  const [history, setHistory] = useState<HistoryPoint[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
 
   const load = async () => {
     try {
-      const [s, h] = await fetchDashboard();
+      const [s, h, hist] = await fetchDashboard();
       setSummary(s);
       setHoldings(h);
+      setHistory(hist);
       setError(null);
     } catch {
       setError(BACKEND_DOWN);
@@ -33,10 +46,11 @@ export default function Dashboard() {
     const params = new URLSearchParams(window.location.search);
     if (params.has("kite")) window.history.replaceState(null, "", "/");
     fetchDashboard()
-      .then(([s, h]) => {
+      .then(([s, h, hist]) => {
         if (cancelled) return;
         setSummary(s);
         setHoldings(h);
+        setHistory(hist);
         if (params.get("sync") === "failed") setNotice("Logged in, but the automatic sync failed. Try Sync now.");
       })
       .catch(() => {
@@ -109,7 +123,13 @@ export default function Dashboard() {
       {summary && (
         <>
           <SummaryCards summary={summary} />
-          <AllocationBar summary={summary} />
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="min-w-0 lg:col-span-2">
+              <NetWorthChart history={history} />
+            </div>
+            <AllocationBar summary={summary} />
+          </div>
+          <TopMovers holdings={holdings} />
           <HoldingsTable holdings={holdings} />
         </>
       )}

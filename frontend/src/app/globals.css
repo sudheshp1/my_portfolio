@@ -3,6 +3,18 @@
 :root {
   --background: #f8f8f9;
   --foreground: #171717;
+
+  /* Chart tokens. Asset-class colors are fixed per class (validated for colorblind separation). */
+  --series-equity: #2a78d6;
+  --series-mf: #eb6834;
+  --series-cash: #1baf7a;
+  --series-gold: #eda100;
+  --series-debt: #e87ba4;
+  --series-other: #008300;
+  --chart-context: #a1a09a;
+  --chart-grid: #e1e0d9;
+  --chart-axis: #c3c2b7;
+  --chart-muted: #898781;
 }
 
 @theme inline {
@@ -16,6 +28,16 @@
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+
+    --series-equity: #3987e5;
+    --series-mf: #d95926;
+    --series-cash: #199e70;
+    --series-gold: #c98500;
+    --series-debt: #d55181;
+    --series-other: #008300;
+    --chart-context: #6b6a65;
+    --chart-grid: #2c2c2a;
+    --chart-axis: #383835;
   }
 }
 

@@ -16,7 +16,14 @@ export interface Holding {
   pnl: number;
   pnl_pct: number;
   day_change: number;
+  day_change_pct: number;
   as_of: string;
+}
+
+export interface HistoryPoint {
+  date: string;
+  invested: number;
+  current_value: number;
 }
 
 interface Totals {
@@ -51,7 +58,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const getSummary = () => request<Summary>("/summary");
 export const getHoldings = () => request<Holding[]>("/holdings");
+export const getHistory = () => request<HistoryPoint[]>("/history");
 export const runSync = () => request<SyncResult>("/sync", { method: "POST" });
+
+/** Fixed color per asset class — color follows the class, never its rank. */
+export const assetColor = (cls: string) =>
+  `var(--series-${["equity", "mf", "cash", "gold", "debt"].includes(cls) ? cls : "other"})`;
 
 export const ASSET_LABELS: Record<string, string> = {
   equity: "Stocks",
@@ -71,3 +83,13 @@ export const formatPrice = (n: number) => inrPrecise.format(n);
 export const formatQty = (n: number) => qty.format(n);
 export const formatPct = (n: number) => `${n >= 0 ? "+" : ""}${n.toFixed(2)}%`;
 export const formatSigned = (n: number) => `${n >= 0 ? "+" : "−"}${inr.format(Math.abs(n))}`;
+
+/** Short Indian-style amounts for axes: ₹5.84L, ₹1.2Cr. */
+export function formatCompactINR(n: number) {
+  const abs = Math.abs(n);
+  const sign = n < 0 ? "−" : "";
+  if (abs >= 1e7) return `${sign}₹${+(abs / 1e7).toFixed(2)}Cr`;
+  if (abs >= 1e5) return `${sign}₹${+(abs / 1e5).toFixed(2)}L`;
+  if (abs >= 1e3) return `${sign}₹${+(abs / 1e3).toFixed(1)}K`;
+  return `${sign}₹${Math.round(abs)}`;
+}

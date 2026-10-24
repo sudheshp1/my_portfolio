@@ -101,10 +101,10 @@ my_portfolio/
 
 | # | Step | Status | Notes |
 |---|---|---|---|
-| 2.1 | Net-worth headline + day change | ⬜ | |
-| 2.2 | Asset-allocation donut | ⬜ | |
-| 2.3 | Net-worth-over-time line chart (from snapshots) | ⬜ | |
-| 2.4 | Top gainers / losers | ⬜ | |
+| 2.1 | Net-worth headline + day change | ✅ | Covered by the summary cards from 1.6 |
+| 2.2 | Asset-allocation chart | 🟨 | Kept as a stacked bar instead of a donut (easier to compare parts). Fixed, colorblind-validated color per asset class in `globals.css` (light + dark). Needs real-data check |
+| 2.3 | Net-worth-over-time chart (from snapshots) | 🟨 | `GET /history` + Recharts area chart (value) with dashed invested line, hover tooltip, 1M/3M/1Y/All. History only exists from the first sync onward. Needs real-data check |
+| 2.4 | Top gainers / losers | 🟨 | Today's movers (stocks by day %) and overall return (highest/lowest by P&L %). `day_change_pct` added to `/holdings`. Needs real-data check |
 | 2.5 | Sector and market-cap breakdown | ⬜ | Needs sector mapping for instruments |
 | 2.6 | Holding detail page (transactions, avg cost, XIRR) | ⬜ | |
 
@@ -191,3 +191,4 @@ API docs: http://localhost:8000/docs
 | 2026-10-24 | Kite app registered (1.1); FastAPI backend, DB models, Kite login/callback built (1.2, 1.3) |
 | 2026-10-24 | Real Kite login verified (1.3). Sync service + portfolio endpoints built (1.4, 1.5) |
 | 2026-10-24 | Sync verified against real account (1.4, 1.5). Next.js dashboard built and verified (1.6) — **Phase 1 complete** |
+| 2026-10-24 | Phase 2 started on branch `phase-2-dashboard`: allocation polish, net-worth chart, top movers (2.1–2.4) |

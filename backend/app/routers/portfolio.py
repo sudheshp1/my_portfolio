@@ -4,7 +4,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import Account, Holding, Instrument
+from ..models import Account, DailySnapshot, Holding, Instrument
 from ..services import kite_auth, kite_sync
 
 router = APIRouter(tags=["portfolio"])
@@ -36,6 +36,7 @@ def holdings(db: Session = Depends(get_db)):
         invested = h.quantity * h.avg_cost
         current = h.quantity * h.last_price
         pnl = current - invested
+        prev_price = h.last_price - h.day_change
         result.append(
             {
                 "account": acc.name,
@@ -51,6 +52,7 @@ def holdings(db: Session = Depends(get_db)):
                 "pnl": pnl,
                 "pnl_pct": pnl / invested * 100 if invested else 0.0,
                 "day_change": h.quantity * h.day_change,
+                "day_change_pct": h.day_change / prev_price * 100 if prev_price else 0.0,
                 "as_of": h.as_of,
             }
         )
@@ -82,6 +84,18 @@ def summary(db: Session = Depends(get_db)):
         "last_synced": db.query(func.max(Holding.as_of)).scalar(),
         "kite_connected": kite_auth.active_session(db) is not None,
     }
+
+
+@router.get("/history")
+def history(db: Session = Depends(get_db)):
+    """Total invested and current value per day, from the snapshots written on each sync."""
+    rows = (
+        db.query(DailySnapshot.date, func.sum(DailySnapshot.invested), func.sum(DailySnapshot.current_value))
+        .group_by(DailySnapshot.date)
+        .order_by(DailySnapshot.date)
+        .all()
+    )
+    return [{"date": d, "invested": inv, "current_value": cur} for d, inv, cur in rows]
 
 
 @router.get("/positions")
