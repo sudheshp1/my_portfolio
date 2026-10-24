@@ -1,0 +1,25 @@
+# Secrets
+.env
+*.key
+
+# Local data (SQLite DB, uploaded CAS files)
+data/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node
+node_modules/
+.next/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Browser test artifacts
+.playwright-mcp/
